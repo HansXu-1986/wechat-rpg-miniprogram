@@ -30,17 +30,21 @@ let gameData = {
   ]
 }
 
-// 初始化
+// 微信小游戏标准初始化
 function init() {
-  canvas = wx.createCanvas()
+  // 微信小游戏中，canvas已经自动创建了，可以直接获取
+  canvas = canvas || wx.createCanvas()
   ctx = canvas.getContext('2d')
   
-  // 修复：微信小游戏canvas尺寸需要在onResize后获取
   const { windowWidth, windowHeight } = wx.getSystemInfoSync()
   width = windowWidth
   height = windowHeight
   
-  console.log('游戏初始化', width, height)
+  console.log('游戏初始化', { width, height })
+  
+  // 清空背景
+  ctx.fillStyle = '#1a1a2e'
+  ctx.fillRect(0, 0, width, height)
   
   // 监听触摸事件
   canvas.addEventListener('touchstart', onTouchStart)
@@ -408,10 +412,6 @@ enterScene = function(scene) {
   }
 }
 
-// 启动游戏 - 正确时机获取canvas
-wx.onGameStart(() => {
-  // 在下一帧初始化，确保canvas尺寸正确
-  setTimeout(() => {
-    init()
-  }, 100)
-})
+// 微信小游戏启动 - 直接初始化
+// 入口文件已经被wx调用，直接执行init
+init()

@@ -19,11 +19,7 @@
     "scopeDataCheck": false,
     "uglifyFileName": false,
     "checkInvalidKey": true,
-<<<<<<< HEAD
-    "checkSiteMap": true,
-=======
     "checkSiteMap": false,
->>>>>>> 995a818 (Refactor to WeChat Mini Game: complete canvas-based architecture)
     "uploadWithSourceMap": true,
     "compileHotReLoad": false,
     "lazyloadPlaceholderEnable": false,
@@ -57,12 +53,5 @@
     "conversation": {
       "list": []
     }
-<<<<<<< HEAD
-  },
-  "miniprogram": {
-    "currentL": -1,
-    "list": []
-=======
->>>>>>> 995a818 (Refactor to WeChat Mini Game: complete canvas-based architecture)
   }
 }
