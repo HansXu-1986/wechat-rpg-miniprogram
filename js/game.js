@@ -34,8 +34,11 @@ let gameData = {
 function init() {
   canvas = wx.createCanvas()
   ctx = canvas.getContext('2d')
-  width = canvas.width
-  height = canvas.height
+  
+  // 修复：微信小游戏canvas尺寸需要在onResize后获取
+  const { windowWidth, windowHeight } = wx.getSystemInfoSync()
+  width = windowWidth
+  height = windowHeight
   
   console.log('游戏初始化', width, height)
   
@@ -405,7 +408,10 @@ enterScene = function(scene) {
   }
 }
 
-// 启动游戏
+// 启动游戏 - 正确时机获取canvas
 wx.onGameStart(() => {
-  init()
+  // 在下一帧初始化，确保canvas尺寸正确
+  setTimeout(() => {
+    init()
+  }, 100)
 })
