@@ -1,0 +1,56 @@
+<!--character.wxml - 角色管理-->
+<view class="container">
+  <view class="header-info">
+    <text>已有角色: {{characters.length}}/6</text>
+    <button class="btn-sm" bindtap="addRandomCharacter">招募新角色</button>
+  </view>
+
+  <view wx:if="{{characters.length === 0}}" class="empty">
+    <text>还没有任何角色，点击招募新角色吧！</text>
+  </view>
+
+  <view wx:for="{{characters}}" wx:key="id" class="character-card card">
+    <view class="card-header">
+      <view class="char-info">
+        <text class="char-name">{{item.name}} Lv.{{item.level}}</text>
+        <text class="char-class">{{item.class}}</text>
+      </view>
+      <view class="char-exp">
+        <text>Exp: {{item.exp}}</text>
+      </view>
+    </view>
+    
+    <view class="stats">
+      <view class="stat-row">
+        <text>生命</text>
+        <view class="stat-bar">
+          <view class="stat-fill stat-hp" style="width: {{getHpPercent(item)}}%"></view>
+        </view>
+        <text>{{item.hp}}/{{item.maxHp}}</text>
+      </view>
+      <view class="stat-grid">
+        <view class="stat-item">
+          <text>攻击</text>
+          <text class="value">{{item.atk}}</text>
+        </view>
+        <view class="stat-item">
+          <text>防御</text>
+          <text class="value">{{item.def}}</text>
+        </view>
+        <view class="stat-item">
+          <text>移动</text>
+          <text class="value">{{item.mov}}</text>
+        </view>
+        <view class="stat-item">
+          <text>射程</text>
+          <text class="value">{{item.range || 1}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card-actions">
+      <button wx:if="{{item.level >= 10 && canPromote(item)}}" class="btn-sm btn-success" bindtap="promote" data-id="{{item.id}}">转职</button>
+      <button class="btn-sm btn-warning" bindtap="removeCharacter" data-id="{{item.id}}">离队</button>
+    </view>
+  </view>
+</view>

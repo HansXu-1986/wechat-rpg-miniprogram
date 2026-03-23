@@ -1,0 +1,37 @@
+<!--map.wxml - 章节地图-->
+<view class="container">
+  <text class="title">剧情关卡</text>
+  
+  <view class="chapter-list">
+    <view 
+      wx:for="{{chapters}}" 
+      wx:key="id"
+      class="chapter-card card {{currentChapter === item.id ? 'active' : ''}} {{item.locked ? 'locked' : ''}}"
+      bindtap="selectChapter"
+      data-id="{{item.id}}"
+    >
+      <view class="chapter-header">
+        <text class="chapter-number">第{{item.id}}章</text>
+        <text class="chapter-name">{{item.name}}</text>
+        <text wx:if="{{item.locked}}" class="locked-badge">🔒 未解锁</text>
+      </view>
+      <view class="chapter-desc text-muted">{{item.description}}</view>
+      <view class="chapter-info">
+        <text>敌方数量: {{item.enemyCount}}</text>
+        <text>推荐等级: {{item.recommendLevel}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{selectedChapter}}" class="selected-info card">
+    <text class="title">{{selectedChapter.name}}</text>
+    <text class="desc">{{selectedChapter.description}}</text>
+    <button 
+      class="btn btn-primary {{selectedChapter.locked ? 'disabled' : ''}}" 
+      bindtap="startChapter"
+      disabled="{{selectedChapter.locked}}"
+    >
+      {{selectedChapter.locked ? '未解锁' : '开始战斗'}}
+    </button>
+  </view>
+</view>

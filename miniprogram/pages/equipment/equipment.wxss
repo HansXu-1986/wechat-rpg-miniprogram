@@ -1,0 +1,100 @@
+.container {
+  padding: 20rpx;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.empty {
+  text-align: center;
+  padding: 100rpx 0;
+  color: #aaa;
+  font-size: 28rpx;
+}
+
+.equipment-card {
+  margin: 16rpx 0;
+}
+
+.eq-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.eq-name {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.eq-name.common {
+  color: #cccccc;
+}
+
+.eq-name.rare {
+  color: #4facfe;
+}
+
+.eq-name.epic {
+  color: #f093fb;
+}
+
+.eq-name.legendary {
+  color: #fee140;
+  animation: glow 2s infinite;
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.eq-type {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4rpx 12rpx;
+  border-radius: 6rpx;
+  font-size: 22rpx;
+  color: #aaa;
+}
+
+.eq-stats {
+  margin-bottom: 16rpx;
+}
+
+.eq-stats text {
+  display: block;
+  color: #ddd;
+  font-size: 26rpx;
+  margin: 4rpx 0;
+}
+
+.eq-actions {
+  display: flex;
+  gap: 16rpx;
+  justify-content: flex-end;
+}
+
+.shop-section {
+  margin-top: 30rpx;
+}
+
+.shop-items {
+  margin: 20rpx 0;
+}
+
+.shop-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.shop-item:last-child {
+  border-bottom: none;
+}

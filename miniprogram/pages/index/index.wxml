@@ -1,0 +1,39 @@
+<!--index.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="game-title">梦幻模拟战</text>
+    <text class="game-subtitle">Langrisser Mini</text>
+  </view>
+
+  <view class="player-info card">
+    <view class="info-row">
+      <text>指挥官：{{gameData.player.name}}</text>
+      <text>等级 {{gameData.player.level}}</text>
+    </view>
+    <view class="exp-bar">
+      <text>经验 {{gameData.player.exp}} / {{nextLevelExp}}</text>
+      <view class="stat-bar">
+        <view class="stat-fill stat-exp" style="width:{{expPercent}}%"></view>
+      </view>
+    </view>
+    <view class="info-row">
+      <text>金币: {{gameData.player.gold}}</text>
+      <text>上阵角色: {{gameData.player.characters.length}}/6</text>
+    </view>
+  </view>
+
+  <view class="menu-buttons">
+    <button class="btn btn-primary" bindtap="startBattle">开始战斗</button>
+    <button class="btn btn-success" bindtap="goToCharacters">角色管理</button>
+    <button class="btn" bindtap="goToMap">章节地图</button>
+    <button class="btn btn-warning" bindtap="goToEquipment">装备背包</button>
+  </view>
+
+  <view class="card help">
+    <text class="title">游戏说明</text>
+    <text class="text-muted">• 这是经典战棋RPG游戏，还原梦幻模拟战玩法</text>
+    <text class="text-muted">• 格子棋盘移动，克制关系，兵种转职</text>
+    <text class="text-muted">• 每个关卡获得经验和金币，培养你的角色</text>
+    <text class="text-muted">• 合理布阵，利用地形和兵种克制取胜</text>
+  </view>
+</view>

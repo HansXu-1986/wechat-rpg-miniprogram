@@ -1,0 +1,9 @@
+
+{
+  "description": "项目私有配置文件。此文件中的内容将覆盖 project.config.json 中的相同字段。项目的改动的沉淀在这个文件里，不会影响其他人。",
+  "setting": {
+    "cloudfunctionRoot": "cloudfunctions/",
+    "urlCheck": false
+  },
+  "appid": "touristappid"
+}

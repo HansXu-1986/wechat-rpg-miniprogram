@@ -1,0 +1,51 @@
+<!--equipment.wxml - 装备背包-->
+<view class="container">
+  <view class="header">
+    <text class="title">装备背包</text>
+    <text class="text-muted">当前金币: {{gameData.player.gold}}</text>
+  </view>
+
+  <view wx:if="{{equipment.length === 0}}" class="empty">
+    <text>背包还是空的，去战斗中寻找装备吧！</text>
+  </view>
+
+  <view wx:for="{{equipment}}" wx:key="id" class="equipment-card card">
+    <view class="eq-header">
+      <text class="eq-name {{item.rarity}}">{{item.name}}</text>
+      <text class="eq-type">{{item.type}}</text>
+    </view>
+    <view class="eq-stats">
+      <text wx:if="{{item.atk}}">攻击 +{{item.atk}}</text>
+      <text wx:if="{{item.def}}">防御 +{{item.def}}</text>
+      <text wx:if="{{item.hp}}">生命 +{{item.hp}}</text>
+    </view>
+    <view class="eq-actions">
+      <button class="btn-sm" bindtap="equipItem" data-id="{{item.id}}">装备</button>
+      <button class="btn-sm btn-warning" bindtap="sellItem" data-id="{{item.id}}">出售 ({{item.price}}G)</button>
+    </view>
+  </view>
+
+  <view class="shop-section card">
+    <text class="title">商店</text>
+    <text class="text-muted">随机刷新装备，用金币购买</text>
+    <view class="shop-items">
+      <view wx:for="{{shopItems}}" wx:key="id" class="shop-item">
+        <view>
+          <text class="eq-name {{item.rarity}}">{{item.name}}</text>
+          <text class="eq-type">{{item.type}}</text>
+          <view class="eq-stats">
+            <text wx:if="{{item.atk}}">攻击 +{{item.atk}}</text>
+            <text wx:if="{{item.def}}">防御 +{{item.def}}</text>
+          </view>
+        </view>
+        <button class="btn-sm {{gameData.player.gold >= item.price ? 'btn-primary' : ''}}" 
+                bindtap="buyItem" 
+                data-id="{{item.id}}"
+                disabled="{{gameData.player.gold < item.price}}">
+          购买 {{item.price}}G
+        </button>
+      </view>
+    </view>
+    <button class="btn btn-success" bindtap="refreshShop">刷新商店 (50G)</button>
+  </view>
+</view>

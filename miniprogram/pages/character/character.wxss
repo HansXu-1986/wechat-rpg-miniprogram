@@ -1,0 +1,110 @@
+.container {
+  padding: 20rpx;
+}
+
+.header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 0;
+}
+
+.header-info text {
+  font-size: 28rpx;
+  color: white;
+}
+
+.empty {
+  text-align: center;
+  padding: 100rpx 0;
+  color: #aaa;
+  font-size: 28rpx;
+}
+
+.character-card {
+  margin: 16rpx 0;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.char-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: white;
+}
+
+.char-class {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  color: #ddd;
+  margin-top: 4rpx;
+}
+
+.char-exp {
+  color: #aaa;
+  font-size: 24rpx;
+}
+
+.stats {
+  margin: 16rpx 0;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  font-size: 24rpx;
+  color: #ddd;
+}
+
+.stat-row .stat-bar {
+  flex: 1;
+  margin: 0;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.stat-item {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12rpx;
+  border-radius: 8rpx;
+}
+
+.stat-item text:first-child {
+  display: block;
+  color: #aaa;
+  font-size: 22rpx;
+}
+
+.stat-item .value {
+  display: block;
+  color: white;
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-top: 4rpx;
+}
+
+.card-actions {
+  display: flex;
+  gap: 16rpx;
+  justify-content: flex-end;
+  margin-top: 16rpx;
+}
+
+.card-actions .btn-sm {
+  flex: 0 0 auto;
+}

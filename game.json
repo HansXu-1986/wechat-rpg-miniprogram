@@ -1,0 +1,12 @@
+<<<<<<< HEAD
+{
+  "deviceOrientation": "portrait",
+  "showStatusBar": false,
+  "networkTimeout": {
+    "request": 10000,
+    "downloadFile": 10000
+  }
+}
+=======
+{"deviceOrientation": "portrait", "showStatusBar": false, "networkTimeout": {"request": 10000, "downloadFile": 10000}}
+>>>>>>> 995a818 (Refactor to WeChat Mini Game: complete canvas-based architecture)

@@ -1,0 +1,87 @@
+<!--battle.wxml-->
+<view class="battle-container">
+  <!-- 顶部状态栏 -->
+  <view class="top-bar">
+    <view class="turn-info">
+      <text>第 {{turn}} 回合</text>
+      <text>行动: {{currentTeam === 'player' ? '我方' : '敌方'}}</text>
+    </view>
+    <view class="battle-info">
+      <text>击杀: {{killCount}} / {{totalEnemies}}</text>
+    </view>
+    <button class="btn-sm" bindtap="exitBattle">退出</button>
+  </view>
+
+  <!-- 战场网格 -->
+  <scroll-view class="map-scroll" scroll-x scroll-y>
+    <view class="battle-map" style="width: {{gridSize * map[0].length}}px; height: {{gridSize * map.length}}px;">
+      <view 
+        wx:for="{{map}}" 
+        wx:for-item="row" 
+        wx:for-index="y"
+        class="map-row"
+        style="height: {{gridSize}}px;"
+      >
+        <view 
+          wx:for="{{row}}" 
+          wx:for-item="cell" 
+          wx:for-index="x"
+          class="map-cell {{cell.terrain}} {{cell.highlight ? 'highlight' : ''}} {{cell.unit ? 'has-unit' : ''}}"
+          style="width: {{gridSize}}px; height: {{gridSize}}px; left: {{x * gridSize}}px; top: {{y * gridSize}}px;"
+          data-x="{{x}}"
+          data-y="{{y}}"
+          bindtap="cellTap"
+        >
+          <view wx:if="{{cell.unit}}" class="unit {{cell.unit.team}}" style="background-color: {{getUnitColor(cell.unit)}}">
+            <text class="unit-name">{{cell.unit.name}}</text>
+            <text class="unit-hp">{{cell.unit.hp}}/{{cell.unit.maxHp}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 底部操作面板 -->
+  <view class="action-panel">
+    <view wx:if="{{selectedUnit}}" class="selected-info">
+      <view class="unit-header">
+        <text>{{selectedUnit.name}} ({{selectedUnit.class}})</text>
+        <text>CD: {{selectedUnit.cooldown}}</text>
+      </view>
+      <view class="stat-bar">
+        <view class="stat-fill stat-hp" style="width: {{(selectedUnit.hp / selectedUnit.maxHp) * 100}}%"></view>
+      </view>
+      <view class="action-buttons">
+        <button 
+          wx:if="{{canMove}}" 
+          class="btn-sm" 
+          bindtap="moveMode"
+        >移动</button>
+        <button 
+          wx:if="{{canAttack}}" 
+          class="btn-sm btn-primary" 
+          bindtap="attackMode"
+        >攻击</button>
+        <button 
+          wx:if="{{canWait}}" 
+          class="btn-sm btn-warning" 
+          bindtap="endTurn"
+        >待机</button>
+      </view>
+    </view>
+    <view wx:else class="selected-info empty">
+      <text>请选择你的单位</text>
+    </view>
+  </view>
+
+  <!-- 战斗结果弹窗 -->
+  <view wx:if="{{showResult}}" class="modal-overlay" bindtap="closeResult">
+    <view class="modal-content" catchtap>
+      <view class="modal-title">{{resultTitle}}</view>
+      <view class="modal-body">
+        <text wx:for="{{resultRewards}}" wx:key="*this">{{item}}</text>
+      </view>
+      <button class="btn" bindtap="backToIndex">返回主页</button>
+    </view>
+  </view>
+</view>

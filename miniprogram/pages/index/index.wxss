@@ -1,0 +1,73 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40rpx 30rpx;
+}
+
+.header {
+  text-align: center;
+  margin: 40rpx 0 60rpx;
+}
+
+.game-title {
+  display: block;
+  font-size: 64rpx;
+  font-weight: bold;
+  background: linear-gradient(135deg, #f5576c, #f093fb);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 10rpx;
+}
+
+.game-subtitle {
+  display: block;
+  font-size: 28rpx;
+  color: #aaa;
+  letter-spacing: 8rpx;
+}
+
+.player-info {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+}
+
+.exp-bar {
+  margin-top: 16rpx;
+}
+
+.exp-bar text {
+  font-size: 24rpx;
+  color: #aaa;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.menu-buttons {
+  width: 100%;
+  margin-top: 30rpx;
+}
+
+.menu-buttons .btn {
+  width: 100%;
+  margin: 20rpx 0;
+  font-size: 32rpx;
+  padding: 24rpx 0;
+}
+
+.help {
+  margin-top: 40rpx;
+}
+
+.help text {
+  display: block;
+  margin: 8rpx 0;
+  line-height: 1.6;
+}

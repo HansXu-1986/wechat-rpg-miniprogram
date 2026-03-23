@@ -1,0 +1,26 @@
+version: 2.0
+automation:
+  # 推送到 main 分支时自动构建上传
+  on:
+    push:
+      branches:
+        - main
+  # 构建步骤
+  steps:
+    # 安装依赖（如果有需要的话）
+    # - name: install dependencies
+    #   run: npm install
+    
+    # 微信云开发 CI 会自动处理小程序构建
+    - name: build miniprogram
+      run: |
+        echo "Building miniprogram..."
+    
+  # 部署到小程序
+  deploy:
+    miniprogram:
+      appid: wx0f5b36c754c075d1
+      # 上传版本信息
+      version: 1.0.0
+      # 项目配置
+      projectPath: .

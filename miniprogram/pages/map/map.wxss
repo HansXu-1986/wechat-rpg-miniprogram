@@ -1,0 +1,75 @@
+.container {
+  padding: 20rpx;
+}
+
+.chapter-list {
+  margin-top: 20rpx;
+}
+
+.chapter-card {
+  margin: 16rpx 0;
+  transition: all 0.2s;
+}
+
+.chapter-card.active {
+  border-color: #f093fb;
+  box-shadow: 0 0 20rpx rgba(240, 147, 251, 0.3);
+}
+
+.chapter-card.locked {
+  opacity: 0.5;
+}
+
+.chapter-header {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.chapter-number {
+  font-size: 28rpx;
+  color: #f093fb;
+  font-weight: bold;
+}
+
+.chapter-name {
+  font-size: 32rpx;
+  color: white;
+  font-weight: bold;
+  flex: 1;
+}
+
+.locked-badge {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  color: #aaa;
+}
+
+.chapter-desc {
+  margin-bottom: 12rpx;
+  line-height: 1.5;
+}
+
+.chapter-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 24rpx;
+  color: #aaa;
+}
+
+.selected-info {
+  margin-top: 30rpx;
+}
+
+.selected-info .desc {
+  color: #aaa;
+  line-height: 1.6;
+  margin-bottom: 24rpx;
+}
+
+.btn[disabled] {
+  opacity: 0.5;
+}
