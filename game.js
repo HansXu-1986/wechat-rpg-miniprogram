@@ -1,5 +1,5 @@
-// 微信小游戏 - 梦幻战棋RPG v1.1.0
-// 增加：点击敌人查看属性、底部显示选中单位详情、玩家数据持久化
+// 微信小游戏 - 梦幻战棋RPG v1.2.0
+// 增加微信云开发存储每个玩家数据
 
 console.log('=== 梦幻战棋RPG 启动 ===');
 
@@ -13,6 +13,11 @@ var ctx = canvas.getContext('2d');
 var sysInfo = wx.getSystemInfoSync();
 var width = sysInfo.windowWidth;
 var height = sysInfo.windowHeight;
+
+// 微信云开发初始化
+var db = null;
+var openid = null;
+var dataLoaded = false;
 
 console.log('初始化完成', { width: width, height: height });
 
@@ -38,10 +43,10 @@ if (!ctx.constructor.prototype.roundRect) {
 }
 
 // ========== 全局变量 ==========
-var currentScene = 'index';
+var currentScene = 'loading'; // loading 就是正在加载数据
 var selectedUnit = null; // 当前选中的单位（不管敌我）
 
-// 游戏数据
+// 游戏数据 - 默认初始数据
 var gameData = {
   player: {
     name: '主角',
@@ -70,6 +75,9 @@ var gameData = {
     { id: 0, name: '第一关 - 初入战场', unlocked: true, completed: false },
     { id: 1, name: '第二关 - 森林伏击', unlocked: false, completed: false },
     { id: 2, name: '第三关 - 城堡攻坚战', unlocked: false, completed: false }
+  ],
+  units: [ // 拥有的兵种列表 {type, level, ...}
+    {type: 'infantry', count: 1}
   ]
 };
 
@@ -140,6 +148,103 @@ var battleData = {
   gameWin: false
 };
 
+// ========== 云开发函数 ==========
+function initCloud() {
+  if (!wx.cloud) {
+    console.error('请使用 2.2.3 以上基础库以使用云能力');
+    dataLoaded = true;
+    currentScene = 'index';
+    return;
+  }
+
+  wx.cloud.init({
+    env: 'your-env-id', // 需要用户替换成自己的云开发环境ID
+    traceUser: true
+  });
+
+  db = wx.cloud.database();
+  // 匿名登录获取openid
+  wx.cloud.callFunction({
+    name: 'login',
+    success: function(res) {
+      openid = res.result.openid;
+      console.log('获取openid成功', openid);
+      loadPlayerData();
+    },
+    fail: function(err) {
+      console.error('登录失败', err);
+      dataLoaded = true;
+      currentScene = 'index';
+    }
+  });
+}
+
+function loadPlayerData() {
+  if (!db) {
+    dataLoaded = true;
+    currentScene = 'index';
+    return;
+  }
+
+  db.collection('gamePlayer').where({
+    _openid: openid
+  }).get().then(res => {
+    console.log('加载数据', res.data);
+    if (res.data.length > 0) {
+      var data = res.data[0];
+      // 加载保存的数据
+      if (data.gameData) {
+        gameData = data.gameData;
+      }
+    }
+    dataLoaded = true;
+    currentScene = 'index';
+  }).catch(err => {
+    console.error('加载失败', err);
+    dataLoaded = true;
+    currentScene = 'index';
+  });
+}
+
+function savePlayerData() {
+  if (!db || !openid) {
+    console.log('没有云开发，不保存');
+    return;
+  }
+
+  db.collection('gamePlayer').where({
+    _openid: openid
+  }).get().then(res => {
+    if (res.data.length > 0) {
+      // 更新
+      var docId = res.data[0]._id;
+      db.collection('gamePlayer').doc(docId).update({
+        data: {
+          gameData: gameData
+        }
+      }).then(() => {
+        console.log('保存成功');
+      }).catch(err => {
+        console.error('保存失败', err);
+      });
+    } else {
+      // 新增
+      db.collection('gamePlayer').add({
+        data: {
+          gameData: gameData
+        }
+      }).then(() => {
+        console.log('新增保存成功');
+      }).catch(err => {
+        console.error('新增失败', err);
+      });
+    }
+  });
+}
+
+// 开局初始化云开发
+initCloud();
+
 // ========== 事件绑定 - 微信小游戏方式 ==========
 wx.onTouchStart(function(e) {
   var touch = e.touches[0];
@@ -151,6 +256,7 @@ function gameLoop() {
   ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(0, 0, width, height);
   switch (currentScene) {
+    case 'loading': drawLoading(); break;
     case 'index': drawIndex(); break;
     case 'map': drawMap(); break;
     case 'character': drawCharacter(); break;
@@ -160,6 +266,13 @@ function gameLoop() {
     case 'lose': drawLose(); break;
   }
   requestAnimationFrame(gameLoop);
+}
+
+function drawLoading() {
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 24px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('加载玩家数据...', width/2, height/2);
 }
 
 // ========== 场景切换 ==========
@@ -174,6 +287,8 @@ function enterScene(scene) {
 
 // ========== 点击处理 ==========
 function handleClick(x, y) {
+  if (currentScene === 'loading') return;
+
   // 胜负界面
   if (currentScene === 'win' || currentScene === 'lose') {
     if (inRect(x, y, width/2 - 100, height/2 + 50, 200, 60)) {
@@ -213,25 +328,26 @@ function drawIndex() {
   ctx.fillText(p.typeName[p.type], 40, 260);
   ctx.fillText('经验: ' + p.exp + '/' + p.nextExp, 40, 285);
 
-  // 兵种统计 (目前只有主角一个)
-  var unitCount = { infantry: 0, cavalry: 0, archer: 0 };
-  unitCount[p.type]++;
+  // 兵种统计
   ctx.font = 'bold 20px sans-serif';
   ctx.fillText('兵种', width / 2 + 40, 180);
   ctx.font = '16px sans-serif';
   var y = 210;
-  for (var type in unitCount) {
-    if (unitCount[type] > 0) {
-      ctx.fillText(p.typeName[type] + ': ' + unitCount[type], width / 2 + 40, y);
-      y += 25;
-    }
+  var unitCounts = {};
+  gameData.units.forEach(function(u) {
+    if (!unitCounts[u.type]) unitCounts[u.type] = 0;
+    unitCounts[u.type] += u.count;
+  });
+  for (var type in unitCounts) {
+    ctx.fillText(p.typeName[type] + ': ' + unitCounts[type], width / 2 + 40, y);
+    y += 25;
   }
 
   drawButton('开始游戏', width / 2, height - 100, 200, 60, '#4a90e2');
   ctx.fillStyle = '#888888';
   ctx.font = '12px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('v1.1.1', width / 2, height - 30);
+  ctx.fillText('v1.2.0', width / 2, height - 30);
 }
 
 function handleIndexClick(x, y) {
@@ -306,6 +422,8 @@ function drawCharacter() {
 function handleCharacterClick(x, y) {
   if (inRect(x, y, width/2 - 75, height - 85, 150, 50)) {
     enterScene('map');
+    // 保存数据
+    savePlayerData();
   }
 }
 
@@ -451,19 +569,18 @@ function drawUnitInfo() {
   ctx.fillText('兵种: ' + gameData.player.typeName[selectedUnit.type] || selectedUnit.type, left + width/2, y); y -= lineH;
 
   ctx.fillText('生命: ' + selectedUnit.hp + '/' + (selectedUnit.maxHp || 100), left, y += lineH);
-  ctx.fillText('攻击: ' + selectedUnit.attack, left + width/2, y); y += lineH;
-
-  ctx.fillText('防御: ' + selectedUnit.defense, left, y += lineH);
   var terrainBonus = 0;
   if (selectedUnit.x >= 0 && selectedUnit.y >= 0) {
     terrainBonus = getTerrainDefenseBonus(terrain[selectedUnit.y][selectedUnit.x]);
-    ctx.fillText('地形: ' + getTerrainName(terrain[selectedUnit.y][selectedUnit.x]) + '(+' + terrainBonus + '防)', left + width/2, y);
+    ctx.fillText('防御: ' + selectedUnit.defense + '(+' + terrainBonus + '地形)', left + width/2, y);
   }
 }
 
 function handleBattleClick(x, y) {
   if (inRect(x, y, width - 130, height - 140, 100, 40)) {
     enterScene('map');
+    // 过关后保存进度
+    savePlayerData();
     return;
   }
 
@@ -548,6 +665,9 @@ function checkGameOver() {
     battleData.gameWin = false;
     currentScene = 'lose';
     console.log('游戏失败');
+    // 更新玩家血量
+    gameData.player.hp = 0;
+    savePlayerData();
     return;
   }
   // 检查敌人是否还有活的单位
@@ -567,10 +687,25 @@ function checkGameOver() {
     if (currentId + 1 < gameData.maps.length) {
       gameData.maps[currentId + 1].unlocked = true;
     }
-    // 玩家回血（升级已经回满了）
-    if (gameData.player.hp <= 0) {
+    // 玩家获得经验
+    gameData.player.exp += 30;
+    // 检查升级
+    if (gameData.player.exp >= gameData.player.nextExp) {
+      gameData.player.level++;
+      gameData.player.exp -= gameData.player.nextExp;
+      gameData.player.nextExp = Math.floor(gameData.player.nextExp * 1.5);
+      gameData.player.maxHp += 20;
+      gameData.player.hp = gameData.player.maxHp;
+      gameData.player.attack += 3;
+      gameData.player.defense += 2;
+      // 增加兵种数量
+      gameData.units.push({type: gameData.player.type, count: 1});
+    } else {
+      // 回血
       gameData.player.hp = gameData.player.maxHp;
     }
+    // 保存进度
+    savePlayerData();
     currentScene = 'win';
     console.log('游戏胜利');
     return;
@@ -628,6 +763,11 @@ function enemyTurn() {
   }
   selectedUnit = null;
   battleData.selectedUnit = null;
+  // 保存玩家最新血量
+  if (player) {
+    gameData.player.hp = player.hp;
+    savePlayerData();
+  }
 }
 
 function initBattle() {
@@ -706,4 +846,4 @@ gameLoop();
     ctx.textAlign = 'center';
     ctx.fillText('错误: ' + err.message, width/2, height/2);
   }
-}
+}1a
