@@ -1,5 +1,5 @@
-// 微信小游戏 - 梦幻战棋RPG v1.0.9
-// 增加胜负判断、重新开始、地形、兵种相克
+// 微信小游戏 - 梦幻战棋RPG v1.1.0
+// 增加：点击敌人查看属性、底部显示选中单位详情、玩家数据持久化
 
 console.log('=== 梦幻战棋RPG 启动 ===');
 
@@ -39,6 +39,7 @@ if (!ctx.constructor.prototype.roundRect) {
 
 // ========== 全局变量 ==========
 var currentScene = 'index';
+var selectedUnit = null; // 当前选中的单位（不管敌我）
 
 // 游戏数据
 var gameData = {
@@ -52,6 +53,12 @@ var gameData = {
     exp: 0,
     nextExp: 100,
     type: 'infantry', // 步兵
+    // 兵种名称中文
+    typeName: {
+      infantry: '步兵',
+      cavalry: '骑兵',
+      archer: '弓箭手'
+    },
     equipment: {
       weapon: null,
       armor: null,
@@ -69,7 +76,7 @@ var gameData = {
 // 地形类型 - 不同地形有不同加成
 // 0=平地 1=森林 2=山地 3=城墙
 var terrain = [
-  [0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0],
   [0,1,1,0,0,0,0,0,0,0],
   [0,1,2,1,0,0,0,0,0,0],
   [0,1,1,0,0,0,0,0,0,0],
@@ -97,6 +104,15 @@ function getTerrainColor(t) {
   }
 }
 
+function getTerrainName(t) {
+  switch(t) {
+    case 1: return '森林';
+    case 2: return '山地';
+    case 3: return '城墙';
+    default: return '平地';
+  }
+}
+
 // 兵种相克
 // 步兵>弓箭手  骑兵>步兵  弓箭手>骑兵
 var counterTable = {
@@ -114,7 +130,7 @@ function getDamageBonus(attackerType, defenderType) {
 
 // 战场数据
 var battleData = {
-  gridSize: 40,
+  gridSize: 36, // 缩小一点给底部信息留空间
   mapWidth: 10,
   mapHeight: 8,
   units: [],
@@ -149,6 +165,7 @@ function gameLoop() {
 // ========== 场景切换 ==========
 function enterScene(scene) {
   currentScene = scene;
+  selectedUnit = null;
   console.log('切换场景', scene);
   if (scene === 'battle') {
     initBattle();
@@ -180,14 +197,41 @@ function drawIndex() {
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 32px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('梦幻战棋RPG', width / 2, height / 3);
+  ctx.fillText('梦幻战棋RPG', width / 2, 60);
   ctx.font = '16px sans-serif';
-  ctx.fillText('回合制策略角色扮演游戏', width / 2, height / 3 + 50);
-  ctx.fillText('梦幻模拟战风格', width / 2, height / 3 + 75);
-  drawButton('开始游戏', width / 2, height / 2, 200, 60, '#4a90e2');
+  ctx.fillText('回合制策略角色扮演游戏', width / 2, 95);
+  ctx.fillText('梦幻模拟战风格', width / 2, 115);
+
+  // 人物信息
+  var p = gameData.player;
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText('人物信息', 40, 180);
+  ctx.font = '16px sans-serif';
+  ctx.fillText(p.name, 40, 210);
+  ctx.fillText('等级: Lv.' + p.level, 40, 235);
+  ctx.fillText(p.typeName[p.type], 40, 260);
+  ctx.fillText('经验: ' + p.exp + '/' + p.nextExp, 40, 285);
+
+  // 兵种统计 (目前只有主角一个)
+  var unitCount = { infantry: 0, cavalry: 0, archer: 0 };
+  unitCount[p.type]++;
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText('兵种', width / 2 + 40, 180);
+  ctx.font = '16px sans-serif';
+  var y = 210;
+  for (var type in unitCount) {
+    if (unitCount[type] > 0) {
+      ctx.fillText(p.typeName[type] + ': ' + unitCount[type], width / 2 + 40, y);
+      y += 25;
+    }
+  }
+
+  drawButton('开始游戏', width / 2, height - 100, 200, 60, '#4a90e2');
   ctx.fillStyle = '#888888';
   ctx.font = '12px sans-serif';
-  ctx.fillText('v1.0.9', width / 2, height - 30);
+  ctx.textAlign = 'center';
+  ctx.fillText('v1.1.1', width / 2, height - 30);
 }
 
 function handleIndexClick(x, y) {
@@ -210,12 +254,22 @@ function drawMap() {
     drawButton(map.name, width / 2, y, 250, 60, color);
     y += 80;
   });
+  drawButton('角色', width/2 - 130, height - 50, 120, 50, '#4a90e2');
+  drawButton('装备', width/2 + 10, height - 50, 120, 50, '#4a90e2');
   drawButton('返回', 80, height - 50, 120, 50, '#888888');
 }
 
 function handleMapClick(x, y) {
   if (inRect(x, y, 20, height - 75, 120, 50)) {
     enterScene('index');
+    return;
+  }
+  if (inRect(x, y, width/2 - 130, height - 75, 120, 50)) {
+    enterScene('character');
+    return;
+  }
+  if (inRect(x, y, width/2 + 10, height - 75, 120, 50)) {
+    enterScene('equipment');
     return;
   }
   var yy = 100;
@@ -239,7 +293,7 @@ function drawCharacter() {
   ctx.textAlign = 'left';
   var y = 100;
   ctx.fillText('名称: ' + p.name, 40, y += 30);
-  ctx.fillText('职业: 步兵', 40, y += 30);
+  ctx.fillText('职业: ' + p.typeName[p.type], 40, y += 30);
   ctx.fillText('等级: Lv.' + p.level, 40, y += 30);
   ctx.fillText('生命: ' + p.hp + '/' + p.maxHp, 40, y += 30);
   ctx.fillText('攻击: ' + p.attack, 40, y += 30);
@@ -293,7 +347,8 @@ function handleEquipmentClick(x, y) {
 // ========== 战场 ==========
 function drawBattle() {
   ctx.fillStyle = '#2a2a3e';
-  ctx.fillRect(0, 0, width, height);
+  // 给底部信息栏留空间
+  ctx.fillRect(0, 0, width, height - 80);
 
   var gs = battleData.gridSize;
   var startX = 20;
@@ -315,65 +370,99 @@ function drawBattle() {
 
   if (battleData.gameOver) {
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, width, height - 80);
     if (battleData.gameWin) {
       ctx.fillStyle = '#00ff00';
       ctx.font = 'bold 40px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('胜利！', width/2, height/2 - 50);
+      ctx.fillText('胜利！', width/2, (height - 80)/2 - 50);
       ctx.fillStyle = '#ffffff';
       ctx.font = '16px sans-serif';
-      ctx.fillText('你击败了所有敌人', width/2, height/2 - 10);
-      drawButton('返回主页', width/2, height/2 + 50, 200, 60, '#4a90e2');
+      ctx.fillText('你击败了所有敌人', width/2, (height - 80)/2 - 10);
+      drawButton('返回主页', width/2, (height - 80)/2 + 50, 200, 60, '#4a90e2');
     } else {
       ctx.fillStyle = '#ff0000';
       ctx.font = 'bold 40px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('失败', width/2, height/2 - 50);
+      ctx.fillText('失败', width/2, (height - 80)/2 - 50);
       ctx.fillStyle = '#ffffff';
       ctx.font = '16px sans-serif';
-      ctx.fillText('你的角色倒下了', width/2, height/2 - 10);
-      drawButton('重新开始', width/2, height/2 + 50, 200, 60, '#e74c3c');
+      ctx.fillText('你的角色倒下了', width/2, (height - 80)/2 - 10);
+      drawButton('重新开始', width/2, (height - 80)/2 + 50, 200, 60, '#e74c3c');
     }
+  } else {
+    if (battleData.selectedUnit) {
+      var px = startX + battleData.selectedUnit.x * gs;
+      var py = startY + battleData.selectedUnit.y * gs;
+      ctx.strokeStyle = '#ffff00';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(px, py, gs, gs);
+      ctx.lineWidth = 1;
+    }
+
+    battleData.units.forEach(function(unit) {
+      var px = startX + unit.x * gs;
+      var py = startY + unit.y * gs;
+      ctx.fillStyle = unit.team === 'player' ? '#4a90e2' : '#e74c3c';
+      ctx.fillRect(px + 2, py + 2, gs - 4, gs - 4);
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(unit.name[0], px + gs/2, py + gs/2 + 4);
+      // 显示血量
+      ctx.font = '8px sans-serif';
+      ctx.fillText(unit.hp + '/' + (unit.maxHp || 100), px + gs/2, py + gs - 2);
+    });
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText((battleData.currentTurn === 'player' ? '我方' : '敌方') + '回合', 20, 30);
+    drawButton('退出', width - 80, height - 120, 100, 40, '#888888');
+
+    // ========== 底部信息栏：显示选中单位详情 ==========
+    drawUnitInfo();
+  }
+}
+
+// 底部绘制选中单位详细信息
+function drawUnitInfo() {
+  if (!selectedUnit) {
+    ctx.fillStyle = '#333333';
+    ctx.fillRect(0, height - 80, width, 80);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('点击单位查看详细信息', width/2, height - 45);
     return;
   }
 
-  if (battleData.selectedUnit) {
-    var px = startX + battleData.selectedUnit.x * gs;
-    var py = startY + battleData.selectedUnit.y * gs;
-    ctx.strokeStyle = '#ffff00';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(px, py, gs, gs);
-    ctx.lineWidth = 1;
-  }
-
-  battleData.units.forEach(function(unit) {
-    var px = startX + unit.x * gs;
-    var py = startY + unit.y * gs;
-    ctx.fillStyle = unit.team === 'player' ? '#4a90e2' : '#e74c3c';
-    ctx.fillRect(px + 2, py + 2, gs - 4, gs - 4);
-    ctx.fillStyle = '#fff';
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(unit.name[0], px + gs/2, py + gs/2 + 4);
-    // 显示血量
-    ctx.font = '8px sans-serif';
-    ctx.fillText(unit.hp + '/' + (unit.maxHp || 100), px + gs/2, py + gs - 2);
-  });
-
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = '#333333';
+  ctx.fillRect(0, height - 80, width, 80);
+  ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 16px sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText((battleData.currentTurn === 'player' ? '我方' : '敌方') + '回合', 20, 30);
-  if (battleData.selectedUnit) {
-    ctx.fillText('选中: ' + battleData.selectedUnit.name, 20, 50);
-  }
 
-  drawButton('退出', width - 80, height - 40, 100, 40, '#888888');
+  var y = height - 65;
+  var left = 20;
+  var lineH = 20;
+
+  ctx.fillText('名称: ' + selectedUnit.name, left, y); y += lineH;
+  ctx.fillText('兵种: ' + gameData.player.typeName[selectedUnit.type] || selectedUnit.type, left + width/2, y); y -= lineH;
+
+  ctx.fillText('生命: ' + selectedUnit.hp + '/' + (selectedUnit.maxHp || 100), left, y += lineH);
+  ctx.fillText('攻击: ' + selectedUnit.attack, left + width/2, y); y += lineH;
+
+  ctx.fillText('防御: ' + selectedUnit.defense, left, y += lineH);
+  var terrainBonus = 0;
+  if (selectedUnit.x >= 0 && selectedUnit.y >= 0) {
+    terrainBonus = getTerrainDefenseBonus(terrain[selectedUnit.y][selectedUnit.x]);
+    ctx.fillText('地形: ' + getTerrainName(terrain[selectedUnit.y][selectedUnit.x]) + '(+' + terrainBonus + '防)', left + width/2, y);
+  }
 }
 
 function handleBattleClick(x, y) {
-  if (inRect(x, y, width - 130, height - 60, 100, 40)) {
+  if (inRect(x, y, width - 130, height - 140, 100, 40)) {
     enterScene('map');
     return;
   }
@@ -401,15 +490,16 @@ function handleBattleClick(x, y) {
     }
   }
 
-  // 点击己方单位 = 选中
-  if (clickedUnit && clickedUnit.team === 'player') {
+  // 点击任何单位都选中，方便查看属性
+  if (clickedUnit) {
     battleData.selectedUnit = clickedUnit;
+    selectedUnit = clickedUnit;
     console.log('选中单位', clickedUnit);
     return;
   }
 
-  // 已经选中了己方单位
-  if (battleData.selectedUnit) {
+  // 已经选中了单位，目标空格，移动
+  if (battleData.selectedUnit && !clickedUnit) {
     var dx = Math.abs(gridX - battleData.selectedUnit.x);
     var dy = Math.abs(gridY - battleData.selectedUnit.y);
 
@@ -419,61 +509,29 @@ function handleBattleClick(x, y) {
       return;
     }
 
-    // 目标格子有单位
-    if (clickedUnit) {
-      // 敌人 = 攻击
-      if (clickedUnit.team === 'enemy') {
-        // 计算伤害 = 攻击者攻击 - 防御者防御 + 地形防御 + 相克
-        var t = terrain[gridY][gridX];
-        var defBonus = getTerrainDefenseBonus(t);
-        var counter = getDamageBonus(battleData.selectedUnit.type, clickedUnit.type);
-        var damage = Math.max(1, Math.floor((battleData.selectedUnit.attack - clickedUnit.defense - defBonus) * counter));
-        clickedUnit.hp -= damage;
-        console.log('攻击伤害', damage, clickedUnit.name + '剩余' + clickedUnit.hp);
-        // 敌人死亡移除
-        if (clickedUnit.hp <= 0) {
-          var idx = battleData.units.indexOf(clickedUnit);
-          battleData.units.splice(idx, 1);
-          gameData.player.exp += 30;
-          // 检查升级
-          if (gameData.player.exp >= gameData.player.nextExp) {
-            gameData.player.level++;
-            gameData.player.exp -= gameData.player.nextExp;
-            gameData.player.nextExp = Math.floor(gameData.player.nextExp * 1.5);
-            gameData.player.maxHp += 20;
-            gameData.player.hp = gameData.player.maxHp;
-            gameData.player.attack += 3;
-            gameData.player.defense += 2;
-          }
-        }
-        battleData.selectedUnit = null;
-        checkGameOver();
-        if (!battleData.gameOver) {
-          battleData.currentTurn = 'enemy';
-          setTimeout(function() {
-            enemyTurn();
-          }, 800);
-        }
-      } else if (clickedUnit.team === 'player') {
-        // 己方单位 = 重新选中
-        battleData.selectedUnit = clickedUnit;
-      }
-      return;
-    } else {
-      // 空格子 = 移动
-      battleData.selectedUnit.x = gridX;
-      battleData.selectedUnit.y = gridY;
-      console.log('移动完成', battleData.selectedUnit);
-      battleData.selectedUnit = null;
-      checkGameOver();
-      if (!battleData.gameOver) {
-        battleData.currentTurn = 'enemy';
-        setTimeout(function() {
-          enemyTurn();
-        }, 800);
-      }
+    // 空格子 = 移动
+    battleData.selectedUnit.x = gridX;
+    battleData.selectedUnit.y = gridY;
+    console.log('移动完成', battleData.selectedUnit);
+    battleData.selectedUnit = null;
+    selectedUnit = null;
+    checkGameOver();
+    if (!battleData.gameOver) {
+      battleData.currentTurn = 'enemy';
+      setTimeout(function() {
+        enemyTurn();
+      }, 800);
     }
   }
+}
+
+function attackEnemy(attacker, defender) {
+  var t = terrain[defender.y][defender.x];
+  var defBonus = getTerrainDefenseBonus(t);
+  var counter = getDamageBonus(attacker.type, defender.type);
+  var damage = Math.max(1, Math.floor((attacker.attack - defender.defense - defBonus) * counter));
+  defender.hp -= damage;
+  console.log('攻击伤害', damage, attacker.name + '击中' + defender.name);
 }
 
 function checkGameOver() {
@@ -509,6 +567,10 @@ function checkGameOver() {
     if (currentId + 1 < gameData.maps.length) {
       gameData.maps[currentId + 1].unlocked = true;
     }
+    // 玩家回血（升级已经回满了）
+    if (gameData.player.hp <= 0) {
+      gameData.player.hp = gameData.player.maxHp;
+    }
     currentScene = 'win';
     console.log('游戏胜利');
     return;
@@ -526,6 +588,8 @@ function enemyTurn() {
   }
   if (!player) {
     battleData.currentTurn = 'player';
+    selectedUnit = null;
+    battleData.selectedUnit = null;
     return;
   }
 
@@ -533,6 +597,8 @@ function enemyTurn() {
   var enemyList = battleData.units.filter(function(u) { return u.team === 'enemy' && u.hp > 0; });
   if (enemyList.length === 0) {
     battleData.currentTurn = 'player';
+    selectedUnit = null;
+    battleData.selectedUnit = null;
     return;
   }
 
@@ -545,16 +611,7 @@ function enemyTurn() {
 
     // 如果已经相邻，攻击玩家
     if (adx + ady <= 1) {
-      var t = terrain[player.y][player.x];
-      var defBonus = getTerrainDefenseBonus(t);
-      var counter = getDamageBonus(enemy.type, player.type);
-      var damage = Math.max(1, Math.floor((enemy.attack - player.defense - defBonus) * counter));
-      player.hp -= damage;
-      console.log('敌人攻击', damage, '玩家剩余' + player.hp);
-      if (player.hp <= 0) {
-        var idx = battleData.units.indexOf(player);
-        battleData.units.splice(idx, 1);
-      }
+      attackEnemy(enemy, player);
     } else {
       // 向玩家移动一步
       if (adx > ady) {
@@ -569,6 +626,8 @@ function enemyTurn() {
   if (!battleData.gameOver) {
     battleData.currentTurn = 'player';
   }
+  selectedUnit = null;
+  battleData.selectedUnit = null;
 }
 
 function initBattle() {
@@ -577,6 +636,7 @@ function initBattle() {
     { id: 2, name: '敌人', team: 'enemy', x: 7, y: 3, hp: 50, maxHp: 50, attack: 8, defense: 3, type: 'infantry' }
   ];
   battleData.selectedUnit = null;
+  selectedUnit = null;
   battleData.currentTurn = 'player';
   battleData.gameOver = false;
   battleData.gameWin = false;

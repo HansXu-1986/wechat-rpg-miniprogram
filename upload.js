@@ -13,8 +13,8 @@ const project = new ci.Project({
 
 ci.upload({
   project,
-  version: '1.0.8',
-  desc: '修复选中后无法移动空格的bug',
+  version: '1.1.1',
+  desc: '首页增加人物信息和兵种统计',
   onProgressUpdate: console.log,
 }).then(result => {
   console.log('\n✅ 上传成功！', result);
