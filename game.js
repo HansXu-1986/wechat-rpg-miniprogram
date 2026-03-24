@@ -1,26 +1,47 @@
-// 微信小游戏 - 梦幻战棋RPG v1.0.4
-// 带错误捕获
+// 微信小游戏 - 梦幻战棋RPG v1.0.5
+// 修复 CanvasRenderingContext2D 未定义问题
 
 console.log('=== 梦幻战棋RPG 启动 ===');
 
 try {
 
 // 获取 canvas
-const canvas = wx.createCanvas();
-const ctx = canvas.getContext('2d');
+var canvas = wx.createCanvas();
+var ctx = canvas.getContext('2d');
 
 // 获取系统信息
-const sysInfo = wx.getSystemInfoSync();
-const width = sysInfo.windowWidth;
-const height = sysInfo.windowHeight;
+var sysInfo = wx.getSystemInfoSync();
+var width = sysInfo.windowWidth;
+var height = sysInfo.windowHeight;
 
-console.log('初始化完成', { width, height });
+console.log('初始化完成', { width: width, height: height });
+
+// ========== 兼容性 polyfill - 现在可以访问了 ==========
+if (!ctx.constructor.prototype.roundRect) {
+  ctx.constructor.prototype.roundRect = function(x, y, w, h, r) {
+    if (typeof r === 'number') {
+      r = {tl: r, tr: r, br: r, bl: r};
+    }
+    this.beginPath();
+    this.moveTo(x + r.tl, y);
+    this.lineTo(x + w - r.tr, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+    this.lineTo(x + w, y + h - r.br);
+    this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+    this.lineTo(x + r.bl, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+    this.lineTo(x, y + r.tl);
+    this.quadraticCurveTo(x, y, x + r.tl, y);
+    this.closePath();
+    return this;
+  };
+}
 
 // ========== 全局变量 ==========
-let currentScene = 'index';
+var currentScene = 'index';
 
 // 游戏数据
-const gameData = {
+var gameData = {
   player: {
     level: 1,
     hp: 100,
@@ -44,7 +65,7 @@ const gameData = {
 };
 
 // 战场数据
-const battleData = {
+var battleData = {
   gridSize: 40,
   mapWidth: 10,
   mapHeight: 8,
@@ -52,30 +73,9 @@ const battleData = {
   currentTurn: 'player'
 };
 
-// ========== 兼容性 polyfill ==========
-if (!CanvasRenderingContext2D.prototype.roundRect) {
-  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
-    if (typeof r === 'number') {
-      r = {tl: r, tr: r, br: r, bl: r};
-    }
-    this.beginPath();
-    this.moveTo(x + r.tl, y);
-    this.lineTo(x + w - r.tr, y);
-    this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
-    this.lineTo(x + w, y + h - r.br);
-    this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
-    this.lineTo(x + r.bl, y + h);
-    this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
-    this.lineTo(x, y + r.tl);
-    this.quadraticCurveTo(x, y, x + r.tl, y);
-    this.closePath();
-    return this;
-  };
-}
-
-// ========== 事件绑定 ==========
-canvas.addEventListener('touchstart', function(e) {
-  const touch = e.touches[0];
+// ========== 事件绑定 - 微信小游戏方式 ==========
+wx.onTouchStart(function(e) {
+  var touch = e.touches[0];
   handleClick(touch.clientX, touch.clientY);
 });
 
@@ -131,12 +131,12 @@ function drawIndex() {
 
   ctx.fillStyle = '#888888';
   ctx.font = '12px sans-serif';
-  ctx.fillText('v1.0.4', width / 2, height - 30);
+  ctx.fillText('v1.0.5', width / 2, height - 30);
 }
 
 function handleIndexClick(x, y) {
-  const bx = width / 2 - 100;
-  const by = height / 2 - 30;
+  var bx = width / 2 - 100;
+  var by = height / 2 - 30;
   if (inRect(x, y, bx, by, 200, 60)) {
     enterScene('map');
   }
@@ -149,9 +149,9 @@ function drawMap() {
   ctx.textAlign = 'center';
   ctx.fillText('选择关卡', width / 2, 40);
 
-  let y = 100;
+  var y = 100;
   gameData.maps.forEach(function(map) {
-    const color = map.unlocked ? '#4a90e2' : '#666666';
+    var color = map.unlocked ? '#4a90e2' : '#666666';
     drawButton(map.name, width / 2, y, 250, 60, color);
     y += 80;
   });
@@ -167,7 +167,7 @@ function handleMapClick(x, y) {
   }
 
   // 关卡点击
-  let yy = 100;
+  var yy = 100;
   gameData.maps.forEach(function(map) {
     if (inRect(x, yy, width/2 - 125, yy - 30, 250, 60) && map.unlocked) {
       gameData.currentMap = map.id;
@@ -260,6 +260,16 @@ function drawBattle() {
     }
   }
 
+  // 高亮选中的单位
+  if (battleData.selectedUnit) {
+    var px = startX + battleData.selectedUnit.x * gs;
+    var py = startY + battleData.selectedUnit.y * gs;
+    ctx.strokeStyle = '#ffff00';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(px, py, gs, gs);
+    ctx.lineWidth = 1;
+  }
+
   // 单位
   battleData.units.forEach(function(unit) {
     var px = startX + unit.x * gs;
@@ -277,6 +287,9 @@ function drawBattle() {
   ctx.font = 'bold 16px sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText((battleData.currentTurn === 'player' ? '我方' : '敌方') + '回合', 20, 30);
+  if (battleData.selectedUnit) {
+    ctx.fillText('选中: ' + battleData.selectedUnit.name, 20, 50);
+  }
 
   // 退出按钮
   drawButton('退出', width - 80, height - 40, 100, 40, '#888888');
@@ -286,6 +299,66 @@ function handleBattleClick(x, y) {
   if (inRect(x, y, width - 130, height - 60, 100, 40)) {
     enterScene('map');
     return;
+  }
+
+  if (battleData.currentTurn !== 'player') return;
+
+  // 点击格子 - 转换为棋盘坐标
+  var gs = battleData.gridSize;
+  var startX = 20;
+  var startY = 60;
+  var gridX = Math.floor((x - startX) / gs);
+  var gridY = Math.floor((y - startY) / gs);
+
+  // 检查是否在棋盘范围内
+  if (gridX < 0 || gridX >= battleData.mapWidth || gridY < 0 || gridY >= battleData.mapHeight) {
+    return;
+  }
+
+  // 看看点击的是不是己方单位
+  var clickedUnit = null;
+  for (var i = 0; i < battleData.units.length; i++) {
+    var u = battleData.units[i];
+    if (u.team === 'player' && u.x === gridX && u.y === gridY) {
+      clickedUnit = u;
+      break;
+    }
+  }
+
+  if (clickedUnit) {
+    // 选中单位
+    battleData.selectedUnit = clickedUnit;
+    console.log('选中单位', clickedUnit);
+    return;
+  }
+
+  // 如果已经选中了单位，尝试移动到点击的格子
+  if (battleData.selectedUnit) {
+    // 检查格子是否为空
+    var occupied = false;
+    for (var i = 0; i < battleData.units.length; i++) {
+      if (battleData.units[i].x === gridX && battleData.units[i].y === gridY) {
+        occupied = true;
+        break;
+      }
+    }
+
+    // 检查是否相邻
+    var dx = Math.abs(gridX - battleData.selectedUnit.x);
+    var dy = Math.abs(gridY - battleData.selectedUnit.y);
+    if (!occupied && dx + dy <= 1) {
+      // 可以移动
+      battleData.selectedUnit.x = gridX;
+      battleData.selectedUnit.y = gridY;
+      console.log('移动完成', battleData.selectedUnit);
+      // 回合结束，切到敌方
+      battleData.selectedUnit = null;
+      battleData.currentTurn = 'enemy';
+      // 这里可以加AI，简单起见直接切回来
+      setTimeout(function() {
+        battleData.currentTurn = 'player';
+      }, 500);
+    }
   }
 }
 
