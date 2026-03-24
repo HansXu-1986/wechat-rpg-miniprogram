@@ -165,13 +165,13 @@ function handleMapClick(x, y) {
   }
 
   // 关卡点击
-  let y = 100;
+  let yy = 100;
   gameData.maps.forEach(function(map) {
-    if (inRect(x, y, width/2 - 125, y - 30, 250, 60) && map.unlocked) {
+    if (inRect(x, yy, width/2 - 125, yy - 30, 250, 60) && map.unlocked) {
       gameData.currentMap = map.id;
       enterScene('battle');
     }
-    y += 80;
+    yy += 80;
   });
 }
 
