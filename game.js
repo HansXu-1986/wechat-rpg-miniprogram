@@ -1,7 +1,9 @@
-// 微信小游戏 - 梦幻战棋RPG v1.0.3
-// 单文件完整版本 - 修复所有可能错误
+// 微信小游戏 - 梦幻战棋RPG v1.0.4
+// 带错误捕获
 
 console.log('=== 梦幻战棋RPG 启动 ===');
+
+try {
 
 // 获取 canvas
 const canvas = wx.createCanvas();
@@ -129,7 +131,7 @@ function drawIndex() {
 
   ctx.fillStyle = '#888888';
   ctx.font = '12px sans-serif';
-  ctx.fillText('v1.0.3', width / 2, height - 30);
+  ctx.fillText('v1.0.4', width / 2, height - 30);
 }
 
 function handleIndexClick(x, y) {
@@ -182,11 +184,11 @@ function drawCharacter() {
   ctx.textAlign = 'center';
   ctx.fillText('角色信息', width / 2, 40);
 
-  const p = gameData.player;
+  var p = gameData.player;
   ctx.font = '18px sans-serif';
   ctx.textAlign = 'left';
 
-  let y = 100;
+  var y = 100;
   ctx.fillText('等级: Lv.' + p.level, 40, y += 30);
   ctx.fillText('生命: ' + p.hp + '/' + p.maxHp, 40, y += 30);
   ctx.fillText('攻击: ' + p.attack, 40, y += 30);
@@ -210,11 +212,11 @@ function drawEquipment() {
   ctx.textAlign = 'center';
   ctx.fillText('装备管理', width / 2, 40);
 
-  const eq = gameData.player.equipment;
+  var eq = gameData.player.equipment;
   ctx.font = '16px sans-serif';
   ctx.textAlign = 'left';
 
-  let y = 100;
+  var y = 100;
   drawEquipmentSlot('武器', eq.weapon, 40, y += 50);
   drawEquipmentSlot('护甲', eq.armor, 40, y += 60);
   drawEquipmentSlot('饰品', eq.accessory, 40, y += 60);
@@ -246,22 +248,22 @@ function drawBattle() {
   ctx.fillStyle = '#2a2a3e';
   ctx.fillRect(0, 0, width, height);
 
-  const gs = battleData.gridSize;
-  const startX = 20;
-  const startY = 60;
+  var gs = battleData.gridSize;
+  var startX = 20;
+  var startY = 60;
 
   // 网格
   ctx.strokeStyle = '#444';
-  for (let x = 0; x < battleData.mapWidth; x++) {
-    for (let y = 0; y < battleData.mapHeight; y++) {
+  for (var x = 0; x < battleData.mapWidth; x++) {
+    for (var y = 0; y < battleData.mapHeight; y++) {
       ctx.strokeRect(startX + x * gs, startY + y * gs, gs, gs);
     }
   }
 
   // 单位
   battleData.units.forEach(function(unit) {
-    const px = startX + unit.x * gs;
-    const py = startY + unit.y * gs;
+    var px = startX + unit.x * gs;
+    var py = startY + unit.y * gs;
     ctx.fillStyle = unit.team === 'player' ? '#4a90e2' : '#e74c3c';
     ctx.fillRect(px + 2, py + 2, gs - 4, gs - 4);
     ctx.fillStyle = '#fff';
@@ -297,8 +299,8 @@ function initBattle() {
 
 // ========== 工具函数 ==========
 function drawButton(text, cx, cy, w, h, color) {
-  const x = cx - w / 2;
-  const y = cy - h / 2;
+  var x = cx - w / 2;
+  var y = cy - h / 2;
 
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -318,3 +320,16 @@ function inRect(x, y, rx, ry, rw, rh) {
 // ========== 启动游戏 ==========
 console.log('开始游戏循环');
 gameLoop();
+
+} catch (err) {
+  console.error('启动错误', err);
+  // 画红色背景显示错误信息
+  if (typeof ctx !== 'undefined') {
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('错误: ' + err.message, width/2, height/2);
+  }
+}
