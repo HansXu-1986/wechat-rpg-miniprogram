@@ -1,5 +1,5 @@
-// 微信小游戏 - 梦幻战棋RPG v1.0.5
-// 修复 CanvasRenderingContext2D 未定义问题
+// 微信小游戏 - 梦幻战棋RPG v1.0.7
+// 完善战斗机制：显示血量、正确攻击、不能重叠
 
 console.log('=== 梦幻战棋RPG 启动 ===');
 
@@ -16,7 +16,7 @@ var height = sysInfo.windowHeight;
 
 console.log('初始化完成', { width: width, height: height });
 
-// ========== 兼容性 polyfill - 现在可以访问了 ==========
+// ========== 兼容性 polyfill ==========
 if (!ctx.constructor.prototype.roundRect) {
   ctx.constructor.prototype.roundRect = function(x, y, w, h, r) {
     if (typeof r === 'number') {
@@ -70,6 +70,7 @@ var battleData = {
   mapWidth: 10,
   mapHeight: 8,
   units: [],
+  selectedUnit: null,
   currentTurn: 'player'
 };
 
@@ -81,11 +82,8 @@ wx.onTouchStart(function(e) {
 
 // ========== 主循环 ==========
 function gameLoop() {
-  // 清屏
   ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(0, 0, width, height);
-
-  // 绘制当前场景
   switch (currentScene) {
     case 'index': drawIndex(); break;
     case 'map': drawMap(); break;
@@ -93,7 +91,6 @@ function gameLoop() {
     case 'equipment': drawEquipment(); break;
     case 'battle': drawBattle(); break;
   }
-
   requestAnimationFrame(gameLoop);
 }
 
@@ -123,15 +120,12 @@ function drawIndex() {
   ctx.font = 'bold 32px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('梦幻战棋RPG', width / 2, height / 3);
-
   ctx.font = '16px sans-serif';
   ctx.fillText('回合制策略角色扮演游戏', width / 2, height / 3 + 50);
-
   drawButton('开始游戏', width / 2, height / 2, 200, 60, '#4a90e2');
-
   ctx.fillStyle = '#888888';
   ctx.font = '12px sans-serif';
-  ctx.fillText('v1.0.5', width / 2, height - 30);
+  ctx.fillText('v1.0.7', width / 2, height - 30);
 }
 
 function handleIndexClick(x, y) {
@@ -148,25 +142,20 @@ function drawMap() {
   ctx.font = 'bold 24px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('选择关卡', width / 2, 40);
-
   var y = 100;
   gameData.maps.forEach(function(map) {
     var color = map.unlocked ? '#4a90e2' : '#666666';
     drawButton(map.name, width / 2, y, 250, 60, color);
     y += 80;
   });
-
   drawButton('返回', 80, height - 50, 120, 50, '#888888');
 }
 
 function handleMapClick(x, y) {
-  // 返回按钮
   if (inRect(x, y, 20, height - 75, 120, 50)) {
     enterScene('index');
     return;
   }
-
-  // 关卡点击
   var yy = 100;
   gameData.maps.forEach(function(map) {
     if (inRect(x, yy, width/2 - 125, yy - 30, 250, 60) && map.unlocked) {
@@ -183,18 +172,15 @@ function drawCharacter() {
   ctx.font = 'bold 24px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('角色信息', width / 2, 40);
-
   var p = gameData.player;
   ctx.font = '18px sans-serif';
   ctx.textAlign = 'left';
-
   var y = 100;
   ctx.fillText('等级: Lv.' + p.level, 40, y += 30);
   ctx.fillText('生命: ' + p.hp + '/' + p.maxHp, 40, y += 30);
   ctx.fillText('攻击: ' + p.attack, 40, y += 30);
   ctx.fillText('防御: ' + p.defense, 40, y += 30);
   ctx.fillText('经验: ' + p.exp + '/' + p.nextExp, 40, y += 30);
-
   ctx.textAlign = 'center';
   drawButton('返回地图', width / 2, height - 60, 150, 50, '#888888');
 }
@@ -211,16 +197,13 @@ function drawEquipment() {
   ctx.font = 'bold 24px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('装备管理', width / 2, 40);
-
   var eq = gameData.player.equipment;
   ctx.font = '16px sans-serif';
   ctx.textAlign = 'left';
-
   var y = 100;
   drawEquipmentSlot('武器', eq.weapon, 40, y += 50);
   drawEquipmentSlot('护甲', eq.armor, 40, y += 60);
   drawEquipmentSlot('饰品', eq.accessory, 40, y += 60);
-
   ctx.textAlign = 'center';
   drawButton('返回', width / 2, height - 60, 150, 50, '#888888');
 }
@@ -252,7 +235,6 @@ function drawBattle() {
   var startX = 20;
   var startY = 60;
 
-  // 网格
   ctx.strokeStyle = '#444';
   for (var x = 0; x < battleData.mapWidth; x++) {
     for (var y = 0; y < battleData.mapHeight; y++) {
@@ -260,7 +242,6 @@ function drawBattle() {
     }
   }
 
-  // 高亮选中的单位
   if (battleData.selectedUnit) {
     var px = startX + battleData.selectedUnit.x * gs;
     var py = startY + battleData.selectedUnit.y * gs;
@@ -270,7 +251,6 @@ function drawBattle() {
     ctx.lineWidth = 1;
   }
 
-  // 单位
   battleData.units.forEach(function(unit) {
     var px = startX + unit.x * gs;
     var py = startY + unit.y * gs;
@@ -280,9 +260,11 @@ function drawBattle() {
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(unit.name[0], px + gs/2, py + gs/2 + 4);
+    // 显示血量
+    ctx.font = '8px sans-serif';
+    ctx.fillText(unit.hp + '/' + (unit.maxHp || 100), px + gs/2, py + gs - 2);
   });
 
-  // 回合信息
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 16px sans-serif';
   ctx.textAlign = 'left';
@@ -291,7 +273,6 @@ function drawBattle() {
     ctx.fillText('选中: ' + battleData.selectedUnit.name, 20, 50);
   }
 
-  // 退出按钮
   drawButton('退出', width - 80, height - 40, 100, 40, '#888888');
 }
 
@@ -303,70 +284,137 @@ function handleBattleClick(x, y) {
 
   if (battleData.currentTurn !== 'player') return;
 
-  // 点击格子 - 转换为棋盘坐标
   var gs = battleData.gridSize;
   var startX = 20;
   var startY = 60;
   var gridX = Math.floor((x - startX) / gs);
   var gridY = Math.floor((y - startY) / gs);
 
-  // 检查是否在棋盘范围内
   if (gridX < 0 || gridX >= battleData.mapWidth || gridY < 0 || gridY >= battleData.mapHeight) {
     return;
   }
 
-  // 看看点击的是不是己方单位
+  // 看看点击的是谁
   var clickedUnit = null;
   for (var i = 0; i < battleData.units.length; i++) {
     var u = battleData.units[i];
-    if (u.team === 'player' && u.x === gridX && u.y === gridY) {
+    if (u.x === gridX && u.y === gridY) {
       clickedUnit = u;
       break;
     }
   }
 
-  if (clickedUnit) {
-    // 选中单位
+  // 点击己方单位 = 选中
+  if (clickedUnit && clickedUnit.team === 'player') {
     battleData.selectedUnit = clickedUnit;
     console.log('选中单位', clickedUnit);
     return;
   }
 
-  // 如果已经选中了单位，尝试移动到点击的格子
+  // 已经选中了己方单位
   if (battleData.selectedUnit) {
-    // 检查格子是否为空
-    var occupied = false;
-    for (var i = 0; i < battleData.units.length; i++) {
-      if (battleData.units[i].x === gridX && battleData.units[i].y === gridY) {
-        occupied = true;
-        break;
-      }
-    }
-
-    // 检查是否相邻
     var dx = Math.abs(gridX - battleData.selectedUnit.x);
     var dy = Math.abs(gridY - battleData.selectedUnit.y);
-    if (!occupied && dx + dy <= 1) {
-      // 可以移动
-      battleData.selectedUnit.x = gridX;
-      battleData.selectedUnit.y = gridY;
-      console.log('移动完成', battleData.selectedUnit);
-      // 回合结束，切到敌方
-      battleData.selectedUnit = null;
-      battleData.currentTurn = 'enemy';
-      // 这里可以加AI，简单起见直接切回来
-      setTimeout(function() {
-        battleData.currentTurn = 'player';
-      }, 500);
+
+    // 只能移动/攻击相邻格子
+    if (dx + dy > 1) {
+      console.log('太远了，不能到达');
+      return;
+    }
+
+    // 目标格子有单位
+    if (clickedUnit) {
+      // 敌人 = 攻击
+      if (clickedUnit.team === 'enemy') {
+        clickedUnit.hp -= battleData.selectedUnit.attack;
+        console.log('攻击敌人', clickedUnit.name, '剩余血量', clickedUnit.hp);
+        // 敌人死亡移除
+        if (clickedUnit.hp <= 0) {
+          var idx = battleData.units.indexOf(clickedUnit);
+          battleData.units.splice(idx, 1);
+          gameData.player.exp += 30;
+        }
+        battleData.selectedUnit = null;
+        battleData.currentTurn = 'enemy';
+        setTimeout(function() {
+          enemyTurn();
+        }, 800);
+      }
+      return;
+    } else {
+      // 己方单位 = 重新选中
+      battleData.selectedUnit = clickedUnit;
+      return;
     }
   }
+
+  // 空格子 = 移动
+  if (!clickedUnit && battleData.selectedUnit && dx + dy <= 1) {
+    battleData.selectedUnit.x = gridX;
+    battleData.selectedUnit.y = gridY;
+    console.log('移动完成', battleData.selectedUnit);
+    battleData.selectedUnit = null;
+    battleData.currentTurn = 'enemy';
+    setTimeout(function() {
+      enemyTurn();
+    }, 800);
+  }
+}
+
+function enemyTurn() {
+  // 找玩家
+  var player = null;
+  for (var i = 0; i < battleData.units.length; i++) {
+    if (battleData.units[i].team === 'player') {
+      player = battleData.units[i];
+      break;
+    }
+  }
+  if (!player) {
+    battleData.currentTurn = 'player';
+    return;
+  }
+
+  // 找活的敌人
+  var enemyList = battleData.units.filter(function(u) { return u.team === 'enemy' && u.hp > 0; });
+  if (enemyList.length === 0) {
+    battleData.currentTurn = 'player';
+    // 过关
+    return;
+  }
+
+  // 简单AI：第一个敌人向玩家移动/攻击
+  var enemy = enemyList[0];
+  var dx = player.x - enemy.x;
+  var dy = player.y - enemy.y;
+  var adx = Math.abs(dx);
+  var ady = Math.abs(dy);
+
+  // 如果已经相邻，攻击玩家
+  if (adx + ady <= 1) {
+    player.hp -= enemy.attack;
+    if (player.hp <= 0) {
+      var idx = battleData.units.indexOf(player);
+      battleData.units.splice(idx, 1);
+    }
+  } else {
+    // 向玩家移动一步
+    if (adx > ady) {
+      enemy.x += dx > 0 ? 1 : -1;
+    } else if (ady !== 0) {
+      enemy.y += dy > 0 ? 1 : -1;
+    }
+  }
+
+  battleData.currentTurn = 'player';
 }
 
 function initBattle() {
   battleData.units = [
-    { id: 1, name: '玩家', team: 'player', x: 2, y: 3, hp: 100 },
-    { id: 2, name: '敌人', team: 'enemy', x: 7, y: 3, hp: 50 }
+    { id: 1, name: '玩家', team: 'player', x: 2, y: 3, hp: 100, maxHp: 100, attack: 10 },
+    { id: 2, name: '敌人', team: 'enemy', x: 7, y: 3, hp: 50, maxHp: 50, attack: 8 }
   ];
+  battleData.selectedUnit = null;
   battleData.currentTurn = 'player';
 }
 
@@ -374,12 +422,10 @@ function initBattle() {
 function drawButton(text, cx, cy, w, h, color) {
   var x = cx - w / 2;
   var y = cy - h / 2;
-
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, 8);
   ctx.fill();
-
   ctx.fillStyle = '#ffffff';
   ctx.font = '16px sans-serif';
   ctx.textAlign = 'center';
@@ -396,7 +442,6 @@ gameLoop();
 
 } catch (err) {
   console.error('启动错误', err);
-  // 画红色背景显示错误信息
   if (typeof ctx !== 'undefined') {
     ctx.fillStyle = '#ff0000';
     ctx.fillRect(0, 0, width, height);

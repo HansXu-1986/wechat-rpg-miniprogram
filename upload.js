@@ -13,8 +13,8 @@ const project = new ci.Project({
 
 ci.upload({
   project,
-  version: '1.0.5',
-  desc: '修复 CanvasRenderingContext2D 未定义问题，解决黑屏',
+  version: '1.0.7',
+  desc: '完善战斗机制：显示血量、正确攻击规则、不能重叠站位',
   onProgressUpdate: console.log,
 }).then(result => {
   console.log('\n✅ 上传成功！', result);
