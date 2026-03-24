@@ -13,8 +13,8 @@ const project = new ci.Project({
 
 ci.upload({
   project,
-  version: '1.0.1',
-  desc: '修复黑屏bug - 修正canvas初始化和尺寸获取',
+  version: '1.0.2',
+  desc: '彻底修复黑屏bug - 完全重构为微信小游戏官方标准结构',
   onProgressUpdate: console.log,
 }).then(result => {
   console.log('\n✅ 上传成功！', result);
