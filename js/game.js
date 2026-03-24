@@ -1,13 +1,13 @@
 // 战棋RPG游戏核心 - 微信小游戏版本
-// 全局变量
-let canvas = null
+
+// 全局变量，由入口初始化
 let ctx = null
 let width = 0
 let height = 0
 let currentScene = 'index' // index, map, character, equipment, battle
 
 // 游戏数据
-let gameData = {
+const gameData = {
   player: {
     level: 1,
     hp: 100,
@@ -30,31 +30,53 @@ let gameData = {
   ]
 }
 
-// 微信小游戏标准初始化
-function init() {
-  // 微信小游戏中，canvas已经自动创建了，可以直接获取
-  canvas = canvas || wx.createCanvas()
-  ctx = canvas.getContext('2d')
+// 战场数据
+const battleData = {
+  gridSize: 40,
+  mapWidth: 10,
+  mapHeight: 8,
+  units: [],
+  currentTurn: 'player',
+  selectedUnit: null,
+  moving: false
+}
+
+// 对外暴露初始化
+function initCanvas(c, w, h) {
+  ctx = c
+  width = w
+  height = h
   
-  const { windowWidth, windowHeight } = wx.getSystemInfoSync()
-  width = windowWidth
-  height = windowHeight
+  console.log('游戏核心初始化', { width, height })
   
-  console.log('游戏初始化', { width, height })
+  // 增加 roundRect 兼容性
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+      if (typeof radius === 'number') {
+        radius = {tl: radius, tr: radius, br: radius, bl: radius}
+      }
+      this.moveTo(x + radius.tl, y)
+      this.lineTo(x + width - radius.tr, y)
+      this.quadraticCurveTo(x + width, y, x + width, y + radius.tr)
+      this.lineTo(x + width, y + height - radius.br)
+      this.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height)
+      this.lineTo(x + radius.bl, y + height)
+      this.quadraticCurveTo(x, y + height, x, y + height - radius.bl)
+      this.lineTo(x, y + radius.tl)
+      this.quadraticCurveTo(x, y, x + radius.tl, y)
+      this.closePath()
+    }
+  }
+}
+
+function startGame() {
+  // 首次绘制
+  gameLoop()
   
-  // 清空背景
-  ctx.fillStyle = '#1a1a2e'
-  ctx.fillRect(0, 0, width, height)
-  
-  // 监听触摸事件
+  // 绑定触摸事件 - canvas已经在入口获取了
+  const canvas = ctx.canvas
   canvas.addEventListener('touchstart', onTouchStart)
   canvas.addEventListener('touchend', onTouchEnd)
-  
-  // 进入首页
-  enterScene('index')
-  
-  // 开始游戏循环
-  requestAnimationFrame(gameLoop)
 }
 
 // 游戏循环
@@ -119,6 +141,9 @@ function onTouchEnd(e) {
 function enterScene(scene) {
   currentScene = scene
   console.log('切换场景:', scene)
+  if (scene === 'battle') {
+    initBattle()
+  }
 }
 
 // ========== 首页绘制 ==========
@@ -139,7 +164,7 @@ function drawIndex() {
   // 版本信息
   ctx.fillStyle = '#888888'
   ctx.font = '12px sans-serif'
-  ctx.fillText('v1.0.0', width / 2, height - 30)
+  ctx.fillText('v1.0.2', width / 2, height - 30)
 }
 
 function handleIndexClick(x, y) {
@@ -287,18 +312,6 @@ function handleEquipmentClick(x, y) {
 }
 
 // ========== 战场绘制 ==========
-
-// 战场数据
-let battleData = {
-  gridSize: 40,
-  mapWidth: 10,
-  mapHeight: 8,
-  units: [],
-  currentTurn: 'player',
-  selectedUnit: null,
-  moving: false
-}
-
 function drawBattle() {
   ctx.fillStyle = '#2a2a3e'
   ctx.fillRect(0, 0, width, height)
@@ -359,39 +372,19 @@ function handleBattleClick(x, y) {
 }
 
 // ========== 工具函数 ==========
-
-function drawButton(text, cx, cy, width, height, color) {
-  const x = cx - width / 2
-  const y = cy - height / 2
+function drawButton(text, cx, cy, w, h, color) {
+  const x = cx - w / 2
+  const y = cy - h / 2
   
   ctx.fillStyle = color
   ctx.beginPath()
-  ctx.roundRect(x, y, width, height, 8)
+  ctx.roundRect(x, y, w, h, 8)
   ctx.fill()
   
   ctx.fillStyle = '#ffffff'
   ctx.font = '16px sans-serif'
   ctx.textAlign = 'center'
   ctx.fillText(text, cx, cy + 6)
-}
-
-// 增加 roundRect 兼容性
-if (!CanvasRenderingContext2D.prototype.roundRect) {
-  CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
-    if (typeof radius === 'number') {
-      radius = {tl: radius, tr: radius, br: radius, bl: radius}
-    }
-    this.moveTo(x + radius.tl, y)
-    this.lineTo(x + width - radius.tr, y)
-    this.quadraticCurveTo(x + width, y, x + width, y + radius.tr)
-    this.lineTo(x + width, y + height - radius.br)
-    this.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height)
-    this.lineTo(x + radius.bl, y + height)
-    this.quadraticCurveTo(x, y + height, x, y + height - radius.bl)
-    this.lineTo(x, y + radius.tl)
-    this.quadraticCurveTo(x, y, x + radius.tl, y)
-    this.closePath()
-  }
 }
 
 // 初始化战场 - 示例单位
@@ -403,15 +396,8 @@ function initBattle() {
   battleData.currentTurn = 'player'
 }
 
-// 场景进入钩子
-const originalEnterScene = enterScene
-enterScene = function(scene) {
-  originalEnterScene(scene)
-  if (scene === 'battle') {
-    initBattle()
-  }
+// 导出接口
+module.exports = {
+  initCanvas,
+  startGame
 }
-
-// 微信小游戏启动 - 直接初始化
-// 入口文件已经被wx调用，直接执行init
-init()
